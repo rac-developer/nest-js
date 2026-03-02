@@ -14,9 +14,5 @@ export class CreateUserDto {
     @IsString()
     @IsNotEmpty()
     name: string
-    
-    @IsNumber()
-    @Max(100)
-    @IsNotEmpty()
-    age: number
+
 }

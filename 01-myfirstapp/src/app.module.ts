@@ -9,7 +9,7 @@ import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [TaskModule, UsersModule, PaymentsModule],
-  providers: [UsersService],
-  controllers: [UsersController, TestController],
+  // providers: [UsersService],
+  // controllers: [UsersController, TestController],
 })
 export class AppModule {}
