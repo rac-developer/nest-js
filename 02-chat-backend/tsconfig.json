@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "resolvePackageJsonExports": true,
     "isolatedModules": true,
     "declaration": true,
     "removeComments": true,
@@ -17,11 +16,10 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "commonjs",
+    "moduleResolution": "node",
     "target": "ES2023",
     "strict": true,
-    "esModuleInterop": true,
-    "ignoreDeprecations": "6.0"
+    "esModuleInterop": true
   }
 }

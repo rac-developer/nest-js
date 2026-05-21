@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Slack-style Chat Test Client</title>
+  <style>
+    :root {
+      --bg-color: #1e1e24;
+      --panel-bg: #2a2b36;
+      --border-color: #3f4257;
+      --text-color: #e2e8f0;
+      --primary-color: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent-color: #10b981;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      height: 90vh;
+    }
+
+    h1 {
+      margin-top: 0;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 10px;
+      font-size: 1.8rem;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 20px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .panel {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      box-sizing: border-box;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .user-list {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .user-item {
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+      background-color: rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+    }
+
+    .user-item::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent-color);
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 15px;
+      background-color: rgba(0,0,0,0.2);
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .message {
+      background-color: rgba(255,255,255,0.03);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border-left: 3px solid var(--primary-color);
+      max-width: 80%;
+      align-self: flex-start;
+    }
+
+    .message.system {
+      border-left-color: var(--accent-color);
+      background-color: rgba(16, 185, 129, 0.05);
+      font-style: italic;
+      font-size: 0.9rem;
+    }
+
+    .msg-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .msg-user {
+      font-weight: bold;
+      color: #a5b4fc;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .input-row input {
+      flex: 1;
+    }
+
+    .input-row button {
+      width: auto;
+      padding: 0 20px;
+    }
+
+    .typing-indicator {
+      height: 20px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      font-style: italic;
+      margin-bottom: 5px;
+    }
+  </style>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+
+  <h1>Slack-style Chat Backend Test Client</h1>
+
+  <div class="container">
+    <!-- Panel Izquierdo: Configuración e Info -->
+    <div class="panel">
+      <div class="form-group">
+        <label for="username">Nombre de Usuario:</label>
+        <input type="text" id="username" value="UsuarioPrueba">
+      </div>
+      
+      <div class="form-group">
+        <button id="connectBtn">Conectarse</button>
+      </div>
+
+      <div class="form-group">
+        <label for="roomSelect">Sala:</label>
+        <select id="roomSelect" disabled>
+          <option value="">-- Seleccionar Sala --</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <button id="joinRoomBtn" disabled>Unirse a Sala</button>
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label>Crear Nueva Sala (REST):</label>
+        <input type="text" id="newRoomName" placeholder="Nombre de sala...">
+        <button id="createRoomBtn" style="margin-top:5px; background-color: var(--accent-color);">Crear Sala</button>
+      </div>
+
+      <label style="margin-top: 15px;">Usuarios en Línea:</label>
+      <ul class="user-list" id="usersList">
+        <!-- Lista de usuarios -->
+      </ul>
+    </div>
+
+    <!-- Panel Derecho: Chat -->
+    <div class="panel chat-area">
+      <div class="messages" id="messagesDiv">
+        <div class="message system">
+          <div class="msg-header">Sistema</div>
+          Configura tu usuario y presiona "Conectarse" para empezar.
+        </div>
+      </div>
+      <div class="typing-indicator" id="typingDiv"></div>
+      <div class="input-row">
+        <input type="text" id="messageInput" placeholder="Escribe un mensaje..." disabled>
+        <button id="sendBtn" disabled>Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let socket;
+    let currentRoomId = null;
+    let typingTimeout;
+
+    const usernameInput = document.getElementById('username');
+    const connectBtn = document.getElementById('connectBtn');
+    const roomSelect = document.getElementById('roomSelect');
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const newRoomNameInput = document.getElementById('newRoomName');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const usersList = document.getElementById('usersList');
+    const messagesDiv = document.getElementById('messagesDiv');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const typingDiv = document.getElementById('typingDiv');
+
+    // Cargar salas al iniciar
+    async function loadRooms() {
+      try {
+        const response = await fetch('http://localhost:3000/rooms');
+        const rooms = await response.json();
+        roomSelect.innerHTML = '<option value="">-- Seleccionar Sala --</option>';
+        rooms.forEach(room => {
+          const option = document.createElement('option');
+          option.value = room.id;
+          option.textContent = room.name;
+          roomSelect.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Error al cargar salas:', err);
+        addSystemMessage('Error de red al obtener salas del REST API. Asegúrate de que el backend esté corriendo en http://localhost:3000');
+      }
+    }
+
+    loadRooms();
+
+    // Conectar WebSocket
+    connectBtn.addEventListener('click', () => {
+      const username = usernameInput.value.trim();
+      if (!username) return alert('Ingresa un nombre de usuario');
+
+      if (socket) {
+        socket.disconnect();
+      }
+
+      // Conectarse enviando username en el query handshake
+      socket = io('http://localhost:3000', {
+        query: { username }
+      });
+
+      addSystemMessage(`Conectando como "${username}"...`);
+
+      socket.on('connect', () => {
+        addSystemMessage('Conectado al servidor de WebSockets.');
+        connectBtn.textContent = 'Desconectarse';
+        roomSelect.disabled = false;
+        joinRoomBtn.disabled = false;
+      });
+
+      socket.on('disconnect', () => {
+        addSystemMessage('Desconectado del servidor.');
+        connectBtn.textContent = 'Conectarse';
+        roomSelect.disabled = true;
+        joinRoomBtn.disabled = true;
+        messageInput.disabled = true;
+        sendBtn.disabled = true;
+        usersList.innerHTML = '';
+      });
+
+      // Recibir lista de usuarios
+      socket.on('users_status', (users) => {
+        usersList.innerHTML = '';
+        users.forEach(user => {
+          const li = document.createElement('li');
+          li.className = 'user-item';
+          li.textContent = user.username;
+          usersList.appendChild(li);
+        });
+      });
+
+      // Recibir historial de la sala
+      socket.on('room_history', (data) => {
+        messagesDiv.innerHTML = ''; // Limpiar chat
+        addSystemMessage(`Cargado historial de la sala ${data.roomId}`);
+        data.messages.forEach(msg => {
+          appendMessage(msg.user.username, msg.content, new Date(msg.createdAt));
+        });
+      });
+
+      // Recibir nuevo mensaje
+      socket.on('new_message', (msg) => {
+        appendMessage(msg.user.username, msg.content, new Date(msg.createdAt));
+      });
+
+      // Notificaciones de unión/salida de sala
+      socket.on('user_joined', (data) => {
+        addSystemMessage(`El usuario "${data.user.username}" se ha unido a la sala.`);
+      });
+
+      socket.on('user_left', (data) => {
+        addSystemMessage(`El usuario "${data.user.username}" ha salido de la sala.`);
+      });
+
+      // Notificación de que alguien escribe
+      socket.on('user_typing', (data) => {
+        typingDiv.textContent = `${data.user.username} está escribiendo...`;
+      });
+
+      socket.on('user_stop_typing', (data) => {
+        typingDiv.textContent = '';
+      });
+
+      socket.on('error', (err) => {
+        addSystemMessage(`ERROR: ${err.message}`);
+      });
+    });
+
+    // Unirse a sala
+    joinRoomBtn.addEventListener('click', () => {
+      const roomId = roomSelect.value;
+      if (!roomId) return alert('Selecciona una sala');
+
+      if (currentRoomId) {
+        socket.emit('leave_room', { roomId: currentRoomId });
+      }
+
+      currentRoomId = Number(roomId);
+      socket.emit('join_room', { roomId: currentRoomId });
+      
+      messageInput.disabled = false;
+      sendBtn.disabled = false;
+      messageInput.focus();
+    });
+
+    // Enviar Mensaje
+    function sendMessage() {
+      const content = messageInput.value.trim();
+      if (!content || !currentRoomId) return;
+
+      socket.emit('send_message', { roomId: currentRoomId, content });
+      messageInput.value = '';
+      
+      // Detener indicador de escritura inmediatamente
+      clearTimeout(typingTimeout);
+      socket.emit('stop_typing', { roomId: currentRoomId });
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    // Detectar Escritura (typing)
+    messageInput.addEventListener('input', () => {
+      if (!currentRoomId || !socket) return;
+      
+      socket.emit('typing', { roomId: currentRoomId });
+      
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        socket.emit('stop_typing', { roomId: currentRoomId });
+      }, 2000);
+    });
+
+    // Crear sala vía REST
+    createRoomBtn.addEventListener('click', async () => {
+      const name = newRoomNameInput.value.trim();
+      if (!name) return alert('Ingresa un nombre de sala');
+
+      try {
+        const response = await fetch('http://localhost:3000/rooms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name })
+        });
+        
+        if (response.ok) {
+          addSystemMessage(`Sala "${name}" creada con éxito.`);
+          newRoomNameInput.value = '';
+          await loadRooms();
+        } else {
+          const errData = await response.json();
+          alert(`Error: ${errData.message}`);
+        }
+      } catch (err) {
+        alert('Error al crear sala. Revisa la consola.');
+      }
+    });
+
+    // Helpers UI
+    function addSystemMessage(text) {
+      const msg = document.createElement('div');
+      msg.className = 'message system';
+      msg.innerHTML = `<div class="msg-header">Sistema - ${new Date().toLocaleTimeString()}</div>${text}`;
+      messagesDiv.appendChild(msg);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function appendMessage(username, content, date) {
+      const msg = document.createElement('div');
+      msg.className = 'message';
+      msg.innerHTML = `
+        <div class="msg-header">
+          <span class="msg-user">${username}</span>
+          <span>${date.toLocaleTimeString()}</span>
+        </div>
+        <div>${content}</div>
+      `;
+      messagesDiv.appendChild(msg);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  </script>
+</body>
+</html>
